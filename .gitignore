@@ -1,0 +1,7 @@
+.env
+.venv/
+.venv311/
+__pycache__/
+*.pyc
+.DS_Store
+linear_draft.csv

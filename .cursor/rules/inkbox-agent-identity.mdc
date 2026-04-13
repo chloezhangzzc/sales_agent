@@ -1,0 +1,15 @@
+---
+description: Assigned Inkbox outreach identity
+alwaysApply: true
+---
+
+# Inkbox Agent Identity
+
+- This project uses the Inkbox identity `@outreach-agent`.
+- Primary mailbox: `hirepilot_outreach@inkboxmail.com`.
+- Use the sender name `Chloe` unless the user asks for a different signature.
+- Load the API key from `.env` via `INKBOX_API_KEY`; never hardcode or commit it.
+- Prefer the Python Inkbox SDK for product code and use the CLI for manual mailbox inspection if needed.
+- When sending on behalf of this agent, default to the configured handle from `.env` or the project defaults.
+- The default human contact for the quickstart intro email is `chloezzx@bu.edu`.
+- Approved outreach should default to the review inbox unless live sending is explicitly enabled.
