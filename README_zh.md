@@ -91,10 +91,10 @@ python main.py draft-company \
 
 ### 3. 审核草稿
 
-打开 `linear_draft.csv` 文件，并将 approved 列修改为 yes：
+打开 `linear_draft.csv` 文件，在对应的草稿行，将第一列（`approved` 列）的值修改为 `yes`：
 
 ```csv
-approved=yes
+yes,pending_review,,Linear,hello@linear.app...
 ```
 
 ### 4. 发送已批准的草稿

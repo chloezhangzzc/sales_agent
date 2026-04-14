@@ -124,11 +124,13 @@ def build_openai_client(
     if settings.base_url:
         client_kwargs["base_url"] = settings.base_url
 
+    http_client_factory = http_client_factory or DefaultHttpxClient
     if settings.proxy_enabled:
-        http_client_factory = http_client_factory or DefaultHttpxClient
         if http_client_factory is None:
             raise ImportError("The openai package is required to configure an HTTP proxy")
         client_kwargs["http_client"] = http_client_factory(proxy=settings.proxy_url)
+    elif http_client_factory is not None:
+        client_kwargs["http_client"] = http_client_factory(trust_env=False)
 
     return client_factory(**client_kwargs)
 

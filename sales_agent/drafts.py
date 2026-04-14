@@ -170,20 +170,23 @@ def save_drafts_csv(path: str | Path, drafts: list[OutreachDraft]) -> None:
         "generation_method",
         "actual_recipient_email",
     ]
-    with Path(path).open("w", encoding="utf-8", newline="") as handle:
+    with Path(path).open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
 
 def load_drafts_csv(path: str | Path) -> list[OutreachDraft]:
-    with Path(path).open("r", encoding="utf-8", newline="") as handle:
+    with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         return [OutreachDraft.from_row(row) for row in reader]
 
 
 def is_approved(value: str) -> bool:
-    return value.strip().lower() in {"yes", "y", "true", "1", "approved"}
+    v = value.strip().lower()
+    if v.startswith("approved="):
+        v = v.replace("approved=", "").strip()
+    return v in {"yes", "y", "true", "1", "approved"}
 
 
 def send_approved_drafts(
