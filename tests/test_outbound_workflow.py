@@ -9,7 +9,7 @@ from main import render_company_draft_report
 from sales_agent.config import OpenAISettings
 from sales_agent.drafts import create_draft_from_result, create_drafts, send_approved_drafts
 from sales_agent.leads import load_leads_from_csv
-from sales_agent.openai_drafter import enforce_signature, sanitize_text
+from sales_agent.openai_drafter import build_openai_client, build_user_prompt, enforce_signature, sanitize_text, _parse_payload
 from sales_agent.research import research_lead
 
 
@@ -203,14 +203,109 @@ class OutboundWorkflowTests(unittest.TestCase):
         self.assertEqual(draft.body_text, "Custom body")
         self.assertEqual(draft.generation_method, "openai:gpt-5")
 
+    def test_template_draft_uses_default_signature_name_from_env(self) -> None:
+        result = research_lead(
+            load_leads_from_csv(
+                _write_csv(
+                    "company_name,website_url,contact_email,contact_name,careers_url,notes\n"
+                    "Acme,https://acme.example,hello@acme.example,Alice,,Hiring engineers\n"
+                )
+            )[0],
+            fetcher=lambda _url: """
+            <html>
+              <head><title>Acme</title><meta name="description" content="Hiring engineers now."></head>
+              <body><a href="/careers">Careers</a></body>
+            </html>
+            """,
+        )
+
+        with patch.dict("os.environ", {"DEFAULT_SIGNATURE_NAME": "Lycself"}, clear=True):
+            draft = create_draft_from_result(result)
+
+        self.assertTrue(draft.body_text.endswith("Best,\nLycself"))
+
+    def test_build_openai_client_uses_default_endpoint_without_proxy(self) -> None:
+        captured_kwargs: dict[str, object] = {}
+
+        def fake_client_factory(**kwargs):
+            captured_kwargs.update(kwargs)
+            return object()
+
+        build_openai_client(
+            OpenAISettings(api_key="sk-test", model="gpt-5"),
+            client_factory=fake_client_factory,
+        )
+
+        self.assertEqual(captured_kwargs, {"api_key": "sk-test"})
+
+    def test_build_openai_client_supports_custom_base_url_and_proxy(self) -> None:
+        captured_client_kwargs: dict[str, object] = {}
+        captured_http_client_kwargs: dict[str, object] = {}
+
+        def fake_http_client_factory(**kwargs):
+            captured_http_client_kwargs.update(kwargs)
+            return "proxy-client"
+
+        def fake_client_factory(**kwargs):
+            captured_client_kwargs.update(kwargs)
+            return object()
+
+        build_openai_client(
+            OpenAISettings(
+                api_key="sk-test",
+                model="gpt-4.1-mini",
+                base_url="https://example.com/v1",
+                proxy_enabled=True,
+                proxy_url="http://127.0.0.1:7890",
+            ),
+            client_factory=fake_client_factory,
+            http_client_factory=fake_http_client_factory,
+        )
+
+        self.assertEqual(
+            captured_client_kwargs,
+            {
+                "api_key": "sk-test",
+                "base_url": "https://example.com/v1",
+                "http_client": "proxy-client",
+            },
+        )
+        self.assertEqual(captured_http_client_kwargs, {"proxy": "http://127.0.0.1:7890"})
+
     def test_sanitize_text_replaces_smart_punctuation(self) -> None:
         cleaned = sanitize_text("you’re doing great - 15‑minute intro with “quotes”")
         self.assertEqual(cleaned, 'you\'re doing great - 15-minute intro with "quotes"')
 
+    def test_parse_payload_accepts_fenced_json(self) -> None:
+        payload = _parse_payload('```json\n{"subject":"Hello","body_text":"World"}\n```')
+        self.assertEqual(payload["subject"], "Hello")
+        self.assertEqual(payload["body_text"], "World")
+
+    def test_build_user_prompt_uses_default_signature_name_from_env(self) -> None:
+        result = research_lead(
+            load_leads_from_csv(
+                _write_csv(
+                    "company_name,website_url,contact_email,contact_name,careers_url,notes\n"
+                    "Acme,https://acme.example,hello@acme.example,Alice,,Hiring engineers\n"
+                )
+            )[0],
+            fetcher=lambda _url: """
+            <html>
+              <head><title>Acme</title><meta name="description" content="Hiring engineers now."></head>
+              <body><a href="/careers">Careers</a></body>
+            </html>
+            """,
+        )
+
+        with patch.dict("os.environ", {"DEFAULT_SIGNATURE_NAME": "Lycself"}, clear=True):
+            prompt = build_user_prompt(result)
+
+        self.assertIn("Best,\nLycself", prompt)
+
     def test_enforce_signature_replaces_generated_signature(self) -> None:
         body = "Hi team,\n\nQuick note.\n\nBest,\nSamw"
-        cleaned = enforce_signature(body, signature_name="Chloe")
-        self.assertTrue(cleaned.endswith("Best,\nChloe"))
+        cleaned = enforce_signature(body, signature_name="Lycself")
+        self.assertTrue(cleaned.endswith("Best,\nLycself"))
         self.assertNotIn("Samw", cleaned)
 
     def test_render_company_draft_report_includes_research_and_email(self) -> None:

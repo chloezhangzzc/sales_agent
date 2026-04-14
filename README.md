@@ -28,8 +28,8 @@ The current default mode is safe for testing:
 ## Setup
 
 ```bash
-/Users/zxzhang/anaconda3/bin/python3.11 -m venv .venv311
-source .venv311/bin/activate
+# Requires Python 3.11+. If your default is Python 3.9, use `python3.11 -m venv .venv` instead.
+python -m venv .venv && source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install inkbox openai
 ```
@@ -46,12 +46,21 @@ Expected variables:
 INKBOX_API_KEY=ApiKey_your_key_here
 INKBOX_IDENTITY_HANDLE=outreach-agent
 INKBOX_IDENTITY_DISPLAY_NAME=Chloe
+DEFAULT_SIGNATURE_NAME=Chloe
 INKBOX_IDENTITY_EMAIL=hirepilot_outreach@inkboxmail.com
 OUTREACH_REVIEW_EMAIL=chloezzx@bu.edu
 ALLOW_LIVE_OUTREACH=false
 OPENAI_API=sk_your_key_here
 OPENAI_MODEL=gpt-5
+OPENAI_BASE_URL=
+OPENAI_PROXY_ENABLED=false
+OPENAI_PROXY_URL=
 ```
+
+- `DEFAULT_SIGNATURE_NAME` controls the signature used at the bottom of generated drafts.
+- Leave `OPENAI_BASE_URL` empty to use the default OpenAI endpoint.
+- Set `OPENAI_BASE_URL` to an OpenAI-compatible API endpoint such as `https://example.com/v1` when using another provider.
+- Set `OPENAI_PROXY_ENABLED=true` and `OPENAI_PROXY_URL=http://127.0.0.1:7890` to route only AI requests through a proxy.
 
 ## Quick Start
 
@@ -157,6 +166,6 @@ python main.py send-approved --drafts-file outreach_drafts.csv
 Run:
 
 ```bash
-source .venv311/bin/activate
+source .venv/bin/activate
 python -m unittest discover -s tests
 ```

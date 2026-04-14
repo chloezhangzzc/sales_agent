@@ -10,6 +10,11 @@ DEFAULT_IDENTITY_DISPLAY_NAME = "Chloe"
 DEFAULT_IDENTITY_EMAIL = "hirepilot_outreach@inkboxmail.com"
 DEFAULT_OPENAI_MODEL = "gpt-5"
 DEFAULT_REVIEW_EMAIL = "chloezzx@bu.edu"
+DEFAULT_DRAFT_SIGNATURE_NAME = "Chloe"
+
+
+def env_flag_enabled(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def load_local_env(env_path: Path | None = None) -> None:
@@ -28,6 +33,19 @@ def load_local_env(env_path: Path | None = None) -> None:
         value = value.strip().strip("\"'")
         if key and key not in os.environ:
             os.environ[key] = value
+
+
+def get_default_signature_name() -> str:
+    load_local_env()
+    signature_name = os.getenv("DEFAULT_SIGNATURE_NAME", "").strip()
+    if signature_name:
+        return signature_name
+
+    identity_display_name = os.getenv("INKBOX_IDENTITY_DISPLAY_NAME", "").strip()
+    if identity_display_name:
+        return identity_display_name
+
+    return DEFAULT_DRAFT_SIGNATURE_NAME
 
 
 @dataclass(frozen=True)
@@ -55,7 +73,7 @@ class InkboxSettings:
         )
         identity_email = os.getenv("INKBOX_IDENTITY_EMAIL", DEFAULT_IDENTITY_EMAIL).strip() or DEFAULT_IDENTITY_EMAIL
         review_email = os.getenv("OUTREACH_REVIEW_EMAIL", DEFAULT_REVIEW_EMAIL).strip() or DEFAULT_REVIEW_EMAIL
-        live_outreach_enabled = os.getenv("ALLOW_LIVE_OUTREACH", "").strip().lower() in {"1", "true", "yes"}
+        live_outreach_enabled = env_flag_enabled("ALLOW_LIVE_OUTREACH")
 
         return cls(
             api_key=api_key,
@@ -71,6 +89,9 @@ class InkboxSettings:
 class OpenAISettings:
     api_key: str
     model: str = DEFAULT_OPENAI_MODEL
+    base_url: str | None = None
+    proxy_enabled: bool = False
+    proxy_url: str | None = None
 
     @classmethod
     def from_env(cls) -> "OpenAISettings":
@@ -80,4 +101,16 @@ class OpenAISettings:
             raise ValueError("Missing required environment variable: OPENAI_API or OPENAI_API_KEY")
 
         model = os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL).strip() or DEFAULT_OPENAI_MODEL
-        return cls(api_key=api_key, model=model)
+        base_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
+        proxy_enabled = env_flag_enabled("OPENAI_PROXY_ENABLED")
+        proxy_url = os.getenv("OPENAI_PROXY_URL", "").strip() or None
+        if proxy_enabled and not proxy_url:
+            raise ValueError("Missing required environment variable: OPENAI_PROXY_URL")
+
+        return cls(
+            api_key=api_key,
+            model=model,
+            base_url=base_url,
+            proxy_enabled=proxy_enabled,
+            proxy_url=proxy_url,
+        )

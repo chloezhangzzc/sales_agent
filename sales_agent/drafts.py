@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sales_agent.config import OpenAISettings
+from sales_agent.config import OpenAISettings, get_default_signature_name
 from sales_agent.email_service import InkboxEmailService
 from sales_agent.openai_drafter import generate_email
 from sales_agent.research import ResearchResult
@@ -14,7 +14,6 @@ PRODUCT_ONE_LINER = (
     "Hirepilot helps teams screen candidates faster with AI-native assessment workflows, including AI-generated "
     "OA, voice-based evaluation, and founder interview support."
 )
-DEFAULT_SIGNATURE_NAME = "Chloe"
 
 
 @dataclass(frozen=True)
@@ -90,6 +89,7 @@ def build_opening(result: ResearchResult) -> str:
 
 
 def build_body_text(result: ResearchResult) -> str:
+    signature_name = get_default_signature_name()
     opening = build_opening(result)
     summary_line = f" and saw that {result.summary.lower().rstrip('.')}" if result.summary else "."
     if result.summary and summary_line.endswith(".."):
@@ -102,7 +102,7 @@ def build_body_text(result: ResearchResult) -> str:
         f"If helpful, I can share how teams use this to reduce manual screening time while giving founders a more "
         f"structured way to evaluate candidates.\n\n"
         f"Open to a short conversation?\n\n"
-        f"Best,\n{DEFAULT_SIGNATURE_NAME}"
+        f"Best,\n{signature_name}"
     )
     return body.replace("..", ".")
 
